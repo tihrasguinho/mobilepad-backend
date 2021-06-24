@@ -45,6 +45,6 @@ void main(List<String> args) async {
   app.mount('/notes/', NotesService(connection).router);
 
   await io
-      .serve(app, 'localhost', int.parse(env['PORT'] as String))
-      .then((value) => print('Running on http://localhost:${value.port}'));
+      .serve(app, '0.0.0.0', int.parse(env['PORT'] as String))
+      .then((value) => print('Running...'));
 }
