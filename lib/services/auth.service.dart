@@ -115,7 +115,12 @@ class AuthService {
                     'email': map.first['users']!['email'],
                     'created_at':
                         (map.first['users']!['created_at'] as DateTime)
-                            .toString(),
+                            .toLocal()
+                            .millisecondsSinceEpoch,
+                    'updated_at':
+                        (map.first['users']!['updated_at'] as DateTime)
+                            .toLocal()
+                            .millisecondsSinceEpoch,
                   },
                   'access_token': access_token,
                   'refresh_token': refresh_token,
@@ -226,7 +231,7 @@ class AuthService {
         user['password'] = base64Url.encode(hashed.bytes);
 
         var insert = await connection.mappedResultsQuery(
-          'insert into users (name, username, email, password) values (@name, @username, @email, @password) returning id, created_at',
+          'insert into users (name, username, email, password) values (@name, @username, @email, @password) returning id, created_at, updated_at',
           substitutionValues: {
             'name': user['name'],
             'username': user['username'],
@@ -247,8 +252,12 @@ class AuthService {
             'user': {
               ...user,
               'id': insert.first['users']!['id'],
-              'created_at':
-                  (insert.first['users']!['created_at'] as DateTime).toString(),
+              'created_at': (insert.first['users']!['created_at'] as DateTime)
+                  .toLocal()
+                  .millisecondsSinceEpoch,
+              'updated_at': (insert.first['users']!['updated_at'] as DateTime)
+                  .toLocal()
+                  .millisecondsSinceEpoch,
             },
             'access_token': access_token,
             'refresh_token': refresh_token,
