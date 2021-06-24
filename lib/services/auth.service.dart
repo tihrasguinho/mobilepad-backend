@@ -29,16 +29,18 @@ class AuthService {
       var res = await jwt.renewAccessToken(body['refresh_token']);
 
       if (res['error'] == null) {
-        return Response.ok(
-          json.encode({
+        return Response(
+          200,
+          body: json.encode({
             'error': null,
             'access_token': res['access_token'],
           }),
           headers: headers,
         );
       } else {
-        return Response.forbidden(
-          json.encode({
+        return Response(
+          401,
+          body: json.encode({
             'error': res['error'],
             'access_token': null,
           }),
@@ -46,8 +48,9 @@ class AuthService {
         );
       }
     } else {
-      return Response.forbidden(
-        json.encode({
+      return Response(
+        400,
+        body: json.encode({
           'error': 'refresh token not provided',
           'access_token': null,
         }),
@@ -61,13 +64,10 @@ class AuthService {
     var body =
         json.decode(await request.readAsString()) as Map<String, dynamic>;
 
-    if (connection.isClosed) {
-      await connection.open();
-    }
-
     if (!body.containsKey('user')) {
-      return Response.notFound(
-        json.encode({'message': 'user information not provided!'}),
+      return Response(
+        400,
+        body: json.encode({'message': 'user information not provided!'}),
         headers: headers,
       );
     }
@@ -76,6 +76,10 @@ class AuthService {
 
     if (user.containsKey('email') && user.containsKey('password')) {
       try {
+        if (connection.isClosed) {
+          await connection.open();
+        }
+
         var map = await connection.mappedResultsQuery(
             'select * from users where email = @email',
             substitutionValues: {
@@ -99,8 +103,9 @@ class AuthService {
             var refresh_token =
                 jwt.buildRefreshToken(map.first['users']!['id']);
 
-            return Response.ok(
-              json.encode(
+            return Response(
+              200,
+              body: json.encode(
                 {
                   'error': null,
                   'user': {
@@ -119,8 +124,9 @@ class AuthService {
               headers: headers,
             );
           } else {
-            return Response.notFound(
-              json.encode({
+            return Response(
+              400,
+              body: json.encode({
                 'error': 'wrong password',
                 'user': null,
               }),
@@ -128,8 +134,9 @@ class AuthService {
             );
           }
         } else {
-          return Response.notFound(
-            json.encode({
+          return Response(
+            404,
+            body: json.encode({
               'error': 'user not found',
               'user': null,
             }),
@@ -137,14 +144,16 @@ class AuthService {
           );
         }
       } on PostgreSQLException catch (e) {
-        return Response.notFound(
-          json.encode({'message': e.message}),
+        return Response(
+          500,
+          body: json.encode({'message': e.message}),
           headers: headers,
         );
       }
     } else {
-      return Response.notFound(
-        json.encode({'message': 'user information is invalid'}),
+      return Response(
+        404,
+        body: json.encode({'message': 'user information is invalid'}),
         headers: headers,
       );
     }
@@ -154,13 +163,10 @@ class AuthService {
   FutureOr<Response> createUser(Request request) async {
     var body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
 
-    if (connection.isClosed) {
-      await connection.open();
-    }
-
     if (!body.containsKey('user')) {
-      return Response.notFound(
-        json.encode({'message': 'user information not provided!'}),
+      return Response(
+        404,
+        body: json.encode({'message': 'user information not provided!'}),
         headers: headers,
       );
     }
@@ -172,6 +178,10 @@ class AuthService {
         user.containsKey('name') &&
         user.containsKey('username')) {
       try {
+        if (connection.isClosed) {
+          await connection.open();
+        }
+
         var map = await connection.mappedResultsQuery(
             'select id, username, email from users where (email = @email) or (username = @username)',
             substitutionValues: {
@@ -184,22 +194,25 @@ class AuthService {
         var username = map.isNotEmpty ? map.first['users']!['username'] : '';
 
         if (email == user['email']) {
-          return Response.forbidden(
-            json.encode({'message': 'email is already in use'}),
+          return Response(
+            400,
+            body: json.encode({'message': 'email is already in use'}),
             headers: headers,
           );
         }
 
         if (username == user['username']) {
-          return Response.forbidden(
-            json.encode({'message': 'username is already in use'}),
+          return Response(
+            400,
+            body: json.encode({'message': 'username is already in use'}),
             headers: headers,
           );
         }
 
         if ((user['password'] as String).length < 5) {
-          return Response.forbidden(
-            json.encode({'message': 'your password is too weak'}),
+          return Response(
+            400,
+            body: json.encode({'message': 'your password is too weak'}),
             headers: headers,
           );
         }
@@ -228,8 +241,9 @@ class AuthService {
 
         var refresh_token = jwt.buildRefreshToken(insert.first['users']!['id']);
 
-        return Response.ok(
-          json.encode({
+        return Response(
+          200,
+          body: json.encode({
             'user': {
               ...user,
               'id': insert.first['users']!['id'],
@@ -243,22 +257,21 @@ class AuthService {
         );
       } on PostgreSQLException catch (e) {
         return Response(
-          401,
+          500,
           body: json.encode({'message': e.message}),
           headers: headers,
         );
       } catch (e) {
-        print(e);
-
         return Response(
-          401,
+          500,
           body: json.encode({'message': e}),
           headers: headers,
         );
       }
     } else {
-      return Response.notFound(
-        json.encode({'message': 'user information is invalid'}),
+      return Response(
+        404,
+        body: json.encode({'message': 'user information is invalid'}),
         headers: headers,
       );
     }

@@ -1,13 +1,9 @@
-import 'dart:convert';
-
+import 'package:dotenv/dotenv.dart' show load, env;
 import 'package:mobilepad/services/auth.service.dart';
 import 'package:mobilepad/services/notes.service.dart';
-import 'package:mobilepad/services/users.service.dart';
 import 'package:postgres/postgres.dart';
-import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
-import 'package:dotenv/dotenv.dart' show load, env;
 
 void main(List<String> args) async {
   // load enviroment vars
@@ -30,21 +26,11 @@ void main(List<String> args) async {
 
   final app = Router();
 
-  app.get(
-    '/',
-    (Request request) => Response.ok(
-      json.encode({'message': 'nothing to see here'}),
-      headers: {'Content-Type': 'application/json'},
-    ),
-  );
-
   app.mount('/auth/', AuthService(connection).router);
-
-  app.mount('/users/', UsersService().router);
 
   app.mount('/notes/', NotesService(connection).router);
 
   await io
       .serve(app, '0.0.0.0', int.parse(env['PORT'] as String))
-      .then((value) => print('Running...'));
+      .then((value) => print('Server started...'));
 }
