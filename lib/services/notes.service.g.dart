@@ -12,6 +12,7 @@ Router _$NotesServiceRouter(NotesService service) {
   router.add('DELETE', r'/delete_all', service.deleteAllNotes);
   router.add('DELETE', r'/delete/<id>', service.deleteNote);
   router.add('PUT', r'/update/<id>', service.updateNote);
+  router.add('GET', r'/single/<id>', service.getOne);
   router.add('GET', r'/all', service.getNotes);
   router.add('POST', r'/create', service.createNote);
   return router;

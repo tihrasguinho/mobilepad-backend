@@ -309,6 +309,99 @@ class NotesService {
     }
   }
 
+  @Route.get('/single/<id>')
+  FutureOr<Response> getOne(Request request, String id) async {
+    final authorization = request.headers['Authorization'];
+
+    if (authorization == null) {
+      return Response(
+        400,
+        body: json.encode({
+          'error': 'access token not provided',
+          'notes': [],
+        }),
+        headers: headers,
+      );
+    }
+
+    final res = await jwt.verifyingAccessToken(authorization);
+
+    if (res['error'] != null) {
+      return Response(
+        401,
+        body: json.encode({
+          'error': res['error'],
+          'notes': [],
+        }),
+        headers: headers,
+      );
+    }
+
+    try {
+      if (connection.isClosed) await connection.open();
+
+      final query = await connection.mappedResultsQuery(
+        'select * from notes where id = @id',
+        substitutionValues: {
+          'id': id,
+        },
+      );
+
+      if (query.isEmpty) {
+        return Response(
+          404,
+          body: json.encode({
+            'error': 'note not found',
+            'note': null,
+          }),
+          headers: headers,
+        );
+      }
+
+      dotenv.load();
+
+      final note = crypt.decryptData64(
+          query.first['notes']!['note'], dotenv.env['data_encrypt'] as String);
+
+      return Response(
+        200,
+        body: json.encode({
+          'error': null,
+          'note': {
+            'id': query.first['notes']!['id'],
+            'note': note,
+            'created_at': (query.first['notes']!['created_at'] as DateTime)
+                .toLocal()
+                .millisecondsSinceEpoch,
+            'updated_at': (query.first['notes']!['updated_at'] as DateTime)
+                .toLocal()
+                .millisecondsSinceEpoch,
+            'owner_id': query.first['notes']!['owner_id']
+          }
+        }),
+        headers: headers,
+      );
+    } on PostgreSQLException catch (e) {
+      return Response(
+        500,
+        body: json.encode({
+          'error': e.message,
+          'note': null,
+        }),
+        headers: headers,
+      );
+    } on Exception catch (e) {
+      return Response(
+        500,
+        body: json.encode({
+          'error': e.toString(),
+          'note': null,
+        }),
+        headers: headers,
+      );
+    }
+  }
+
   @Route.get('/all')
   FutureOr<Response> getNotes(Request request) async {
     final authorization = request.headers['Authorization'];
